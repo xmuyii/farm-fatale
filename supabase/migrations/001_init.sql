@@ -15,10 +15,29 @@ CREATE TABLE IF NOT EXISTS public.players (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
     total_matches INTEGER NOT NULL DEFAULT 0,
     total_wins INTEGER NOT NULL DEFAULT 0,
-    favorite_animal TEXT NOT NULL DEFAULT 'pig'
+    favorite_animal TEXT NOT NULL DEFAULT 'pig',
+    game_saves JSONB NOT NULL DEFAULT '{}'::jsonb
 );
 
--- 3. Match History (Authoritative server writes upon round completion)
+-- Ensure game_saves column exists if table was already created
+ALTER TABLE public.players ADD COLUMN IF NOT EXISTS game_saves JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE public.players ADD COLUMN IF NOT EXISTS favorite_animal TEXT NOT NULL DEFAULT 'pig';
+
+-- 3. Compatibility View: public.profiles -> public.players
+-- Ensures any queries or scripts referencing public.profiles succeed without 42P01 error
+CREATE OR REPLACE VIEW public.profiles AS
+SELECT 
+    id,
+    user_id,
+    username,
+    created_at,
+    updated_at,
+    total_matches,
+    total_wins,
+    favorite_animal
+FROM public.players;
+
+-- 4. Match History (Authoritative server writes upon round completion)
 CREATE TABLE IF NOT EXISTS public.matches (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     started_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
@@ -30,7 +49,7 @@ CREATE TABLE IF NOT EXISTS public.matches (
     altar_sacrifices INTEGER NOT NULL DEFAULT 0
 );
 
--- 4. Match Players (Per-player round performance breakdown)
+-- 5. Match Players (Per-player round performance breakdown)
 CREATE TABLE IF NOT EXISTS public.match_players (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     match_id UUID NOT NULL REFERENCES public.matches(id) ON DELETE CASCADE,
@@ -46,33 +65,33 @@ CREATE TABLE IF NOT EXISTS public.match_players (
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
 
--- 5. Daily Leaderboard
+-- 6. Daily Leaderboard
 CREATE TABLE IF NOT EXISTS public.leaderboard_daily (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    profile_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    user_id TEXT NOT NULL REFERENCES public.players(user_id) ON DELETE CASCADE,
     date DATE NOT NULL DEFAULT CURRENT_DATE,
     score INTEGER NOT NULL DEFAULT 0,
-    CONSTRAINT uq_leaderboard_daily UNIQUE (profile_id, date)
+    CONSTRAINT uq_leaderboard_daily UNIQUE (user_id, date)
 );
 
--- 6. Weekly Leaderboard
+-- 7. Weekly Leaderboard
 CREATE TABLE IF NOT EXISTS public.leaderboard_weekly (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    profile_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    user_id TEXT NOT NULL REFERENCES public.players(user_id) ON DELETE CASCADE,
     week_start DATE NOT NULL,
     score INTEGER NOT NULL DEFAULT 0,
-    CONSTRAINT uq_leaderboard_weekly UNIQUE (profile_id, week_start)
+    CONSTRAINT uq_leaderboard_weekly UNIQUE (user_id, week_start)
 );
 
--- 7. Legendary Leaderboard (ELO rating with inactivity decay)
+-- 8. Legendary Leaderboard (ELO rating with inactivity decay)
 CREATE TABLE IF NOT EXISTS public.leaderboard_legendary (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    profile_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE UNIQUE,
+    user_id TEXT NOT NULL REFERENCES public.players(user_id) ON DELETE CASCADE UNIQUE,
     rating INTEGER NOT NULL DEFAULT 1000,
     last_played TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
 
--- 8. Cosmetics Catalog
+-- 9. Cosmetics Catalog
 CREATE TABLE IF NOT EXISTS public.cosmetics (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
@@ -84,17 +103,17 @@ CREATE TABLE IF NOT EXISTS public.cosmetics (
     is_premium BOOLEAN NOT NULL DEFAULT false
 );
 
--- 9. Player Inventory
+-- 10. Player Inventory
 CREATE TABLE IF NOT EXISTS public.inventory (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    profile_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    user_id TEXT NOT NULL REFERENCES public.players(user_id) ON DELETE CASCADE,
     cosmetic_id TEXT NOT NULL REFERENCES public.cosmetics(id) ON DELETE CASCADE,
     is_equipped BOOLEAN NOT NULL DEFAULT false,
     acquired_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
-    CONSTRAINT uq_profile_cosmetic UNIQUE (profile_id, cosmetic_id)
+    CONSTRAINT uq_user_cosmetic UNIQUE (user_id, cosmetic_id)
 );
 
--- 10. Bot Configuration
+-- 11. Bot Configuration
 CREATE TABLE IF NOT EXISTS public.bot_config (
     id TEXT PRIMARY KEY,
     difficulty TEXT NOT NULL DEFAULT 'normal',
@@ -110,18 +129,18 @@ CREATE TABLE IF NOT EXISTS public.bot_config (
 -- ==============================================================================
 CREATE INDEX IF NOT EXISTS idx_matches_started_at ON public.matches(started_at DESC);
 CREATE INDEX IF NOT EXISTS idx_match_players_match ON public.match_players(match_id);
-CREATE INDEX IF NOT EXISTS idx_match_players_profile ON public.match_players(profile_id);
+CREATE INDEX IF NOT EXISTS idx_match_players_user ON public.match_players(user_id);
 CREATE INDEX IF NOT EXISTS idx_leaderboard_daily_date_score ON public.leaderboard_daily(date, score DESC);
 CREATE INDEX IF NOT EXISTS idx_leaderboard_weekly_week_score ON public.leaderboard_weekly(week_start, score DESC);
 CREATE INDEX IF NOT EXISTS idx_leaderboard_legendary_rating ON public.leaderboard_legendary(rating DESC);
-CREATE INDEX IF NOT EXISTS idx_inventory_profile ON public.inventory(profile_id);
+CREATE INDEX IF NOT EXISTS idx_inventory_user ON public.inventory(user_id);
 
 -- ==============================================================================
 -- ROW LEVEL SECURITY (RLS) POLICIES
--- Rule: Public read for leaderboards, matches, cosmetics, profiles.
+-- Rule: Public read for leaderboards, matches, cosmetics, players.
 -- Game server writes via SERVICE ROLE KEY.
 -- ==============================================================================
-ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.players ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.matches ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.match_players ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.leaderboard_daily ENABLE ROW LEVEL SECURITY;
@@ -131,39 +150,60 @@ ALTER TABLE public.cosmetics ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.inventory ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.bot_config ENABLE ROW LEVEL SECURITY;
 
--- Profiles: Public read, authenticated users can insert/update their own profile
-CREATE POLICY "Public profiles read" ON public.profiles FOR SELECT USING (true);
-CREATE POLICY "Users can create profile" ON public.profiles FOR INSERT WITH CHECK (true);
-CREATE POLICY "Users can update own profile" ON public.profiles FOR UPDATE USING (auth.uid() = id OR auth.uid() IS NULL);
+-- Players: Public read, users can insert their own profile on registration
+DROP POLICY IF EXISTS "Public players read" ON public.players;
+CREATE POLICY "Public players read" ON public.players FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Users can create player" ON public.players;
+CREATE POLICY "Users can create player" ON public.players FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Users can update own player" ON public.players;
+CREATE POLICY "Users can update own player" ON public.players FOR UPDATE USING (true);
 
 -- Matches: Public read, Service Role write
+DROP POLICY IF EXISTS "Public matches read" ON public.matches;
 CREATE POLICY "Public matches read" ON public.matches FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Service role match manage" ON public.matches;
 CREATE POLICY "Service role match manage" ON public.matches FOR ALL USING (auth.role() = 'service_role');
 
 -- Match Players: Public read, Service Role write
+DROP POLICY IF EXISTS "Public match players read" ON public.match_players;
 CREATE POLICY "Public match players read" ON public.match_players FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Service role match players manage" ON public.match_players;
 CREATE POLICY "Service role match players manage" ON public.match_players FOR ALL USING (auth.role() = 'service_role');
 
 -- Leaderboards: Public read, Service Role write
+DROP POLICY IF EXISTS "Public daily read" ON public.leaderboard_daily;
 CREATE POLICY "Public daily read" ON public.leaderboard_daily FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Service role daily manage" ON public.leaderboard_daily;
 CREATE POLICY "Service role daily manage" ON public.leaderboard_daily FOR ALL USING (auth.role() = 'service_role');
 
+DROP POLICY IF EXISTS "Public weekly read" ON public.leaderboard_weekly;
 CREATE POLICY "Public weekly read" ON public.leaderboard_weekly FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Service role weekly manage" ON public.leaderboard_weekly;
 CREATE POLICY "Service role weekly manage" ON public.leaderboard_weekly FOR ALL USING (auth.role() = 'service_role');
 
+DROP POLICY IF EXISTS "Public legendary read" ON public.leaderboard_legendary;
 CREATE POLICY "Public legendary read" ON public.leaderboard_legendary FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Service role legendary manage" ON public.leaderboard_legendary;
 CREATE POLICY "Service role legendary manage" ON public.leaderboard_legendary FOR ALL USING (auth.role() = 'service_role');
 
 -- Cosmetics: Public read
+DROP POLICY IF EXISTS "Public cosmetics read" ON public.cosmetics;
 CREATE POLICY "Public cosmetics read" ON public.cosmetics FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Service role cosmetics manage" ON public.cosmetics;
 CREATE POLICY "Service role cosmetics manage" ON public.cosmetics FOR ALL USING (auth.role() = 'service_role');
 
 -- Inventory: Owner read, Service role manage
-CREATE POLICY "Users view own inventory" ON public.inventory FOR SELECT USING (auth.uid() = profile_id OR auth.uid() IS NULL);
+DROP POLICY IF EXISTS "Users view own inventory" ON public.inventory;
+CREATE POLICY "Users view own inventory" ON public.inventory FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Service role inventory manage" ON public.inventory;
 CREATE POLICY "Service role inventory manage" ON public.inventory FOR ALL USING (auth.role() = 'service_role');
 
 -- Bot Config: Public read
+DROP POLICY IF EXISTS "Public bot config read" ON public.bot_config;
 CREATE POLICY "Public bot config read" ON public.bot_config FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Service role bot config manage" ON public.bot_config;
 CREATE POLICY "Service role bot config manage" ON public.bot_config FOR ALL USING (auth.role() = 'service_role');
 
 -- ==============================================================================
