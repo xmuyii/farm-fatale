@@ -1,13 +1,13 @@
 import { Room, Client } from 'colyseus';
 import { FarmState, PlayerSchema, TrapSchema, HoundSchema } from './schema/FarmState.ts';
-import { NETWORK_MESSAGES, AnimalType, VengeanceLogItem, MatchSummary, MatchSummaryPlayer } from '@shared/types.ts';
+import { NETWORK_MESSAGES, AnimalType, VengeanceLogItem, MatchSummary, MatchSummaryPlayer } from '../../../shared/types.ts';
 import {
   GAME_CONSTANTS,
   calculateAltarDemand,
   calculateButcherSpeed,
   calculateButcherCleaverRange,
-} from '@shared/constants.ts';
-import { ANIMAL_ABILITIES, BUTCHER_ABILITIES } from '@shared/abilities.ts';
+} from '../../../shared/constants.ts';
+import { ANIMAL_ABILITIES, BUTCHER_ABILITIES } from '../../../shared/abilities.ts';
 import { recordMatchResult } from '../services/supabase.ts';
 
 const ANIMALS: AnimalType[] = ['chicken', 'pig', 'goat', 'sheep', 'cow', 'horse', 'duck'];

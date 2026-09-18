@@ -1,6 +1,6 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
-import { MatchSummary } from '@shared/types.ts';
+import { MatchSummary } from '../../../shared/types.ts';
 
 dotenv.config();
 

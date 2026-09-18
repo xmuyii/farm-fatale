@@ -1,6 +1,6 @@
 import { Schema, type, MapSchema } from '@colyseus/schema';
-import { AnimalType, Role, MarkTier, GamePhase } from '@shared/types.ts';
-import { GAME_CONSTANTS } from '@shared/constants.ts';
+import { AnimalType, Role, MarkTier, GamePhase } from '../../../../shared/types.ts';
+import { GAME_CONSTANTS } from '../../../../shared/constants.ts';
 
 export class PlayerSchema extends Schema {
   @type('string') id: string = '';
