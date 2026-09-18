@@ -1,0 +1,183 @@
+import { AnimalType, IAbilityDef } from './types.ts';
+
+export const ANIMAL_ABILITIES: Record<AnimalType, { primary: IAbilityDef; betrayal: IAbilityDef }> = {
+  chicken: {
+    primary: {
+      id: 'flap_burst',
+      name: 'Flap Burst',
+      animal: 'chicken',
+      cooldownMs: 8000,
+      description: 'Quick sprint dash (+60% speed for 1.8s) leaving a cloud of disorienting feathers.',
+      isBetrayal: false,
+    },
+    betrayal: {
+      id: 'screech_ping',
+      name: 'Screech Alarm',
+      animal: 'chicken',
+      cooldownMs: 25000,
+      description: 'Emit a loud screech, revealing all nearby allies within 12m on the Butcher map for 4s.',
+      isBetrayal: true,
+    },
+  },
+  pig: {
+    primary: {
+      id: 'body_slam',
+      name: 'Body Slam',
+      animal: 'pig',
+      cooldownMs: 12000,
+      description: 'Knock back any adjacent entity 4m. Can also burrow into mud pits for total stealth.',
+      isBetrayal: false,
+    },
+    betrayal: {
+      id: 'pig_trap',
+      name: 'Slop Trap',
+      animal: 'pig',
+      cooldownMs: 22000,
+      description: 'Place a slippery mud puddle that slows allies who cross it by 50% for 3s.',
+      isBetrayal: true,
+    },
+  },
+  goat: {
+    primary: {
+      id: 'headbutt',
+      name: 'Headbutt',
+      animal: 'goat',
+      cooldownMs: 15000,
+      description: 'Violently ram forward, pushing target 5m. Goat can also vault and climb over crates.',
+      isBetrayal: false,
+    },
+    betrayal: {
+      id: 'goat_ram',
+      name: 'Goat Ram',
+      animal: 'goat',
+      cooldownMs: 18000,
+      description: 'Heavily thrust an ally toward the nearest hazard or butcher direction.',
+      isBetrayal: true,
+    },
+  },
+  sheep: {
+    primary: {
+      id: 'wool_disguise',
+      name: 'Wool Disguise',
+      animal: 'sheep',
+      cooldownMs: 20000,
+      description: 'When standing completely still, blend invisibly into foliage or hay bales. Flock Call reveals.',
+      isBetrayal: false,
+    },
+    betrayal: {
+      id: 'false_flock',
+      name: 'False Flock',
+      animal: 'sheep',
+      cooldownMs: 24000,
+      description: 'Project decoy bleating audio and a fake decoy sprite to bait allies or butcher.',
+      isBetrayal: true,
+    },
+  },
+  cow: {
+    primary: {
+      id: 'stampede',
+      name: 'Stampede Charge',
+      animal: 'cow',
+      cooldownMs: 18000,
+      description: 'Unstoppable charge ahead that tramples and disables butcher snares/traps.',
+      isBetrayal: false,
+    },
+    betrayal: {
+      id: 'cow_mud_slinger',
+      name: 'Manure Slinger',
+      animal: 'cow',
+      cooldownMs: 20000,
+      description: 'Sling mud behind you to blind chasing players or push an ally into harm.',
+      isBetrayal: true,
+    },
+  },
+  horse: {
+    primary: {
+      id: 'sprint_carry',
+      name: 'Sprint & Carry',
+      animal: 'horse',
+      cooldownMs: 15000,
+      description: 'Gallop at +40% speed for 3s. Can pick up and carry a downed teammate to safety.',
+      isBetrayal: false,
+    },
+    betrayal: {
+      id: 'buck_kick',
+      name: 'Buck Kick',
+      animal: 'horse',
+      cooldownMs: 16000,
+      description: 'Kick a trailing ally backwards right into the Butcher path.',
+      isBetrayal: true,
+    },
+  },
+  duck: {
+    primary: {
+      id: 'dive',
+      name: 'Deep Dive',
+      animal: 'duck',
+      cooldownMs: 20000,
+      description: 'Submerge under creek waters or dive into cover, becoming untargetable for 3s.',
+      isBetrayal: false,
+    },
+    betrayal: {
+      id: 'quack_beacon',
+      name: 'Quack Flare',
+      animal: 'duck',
+      cooldownMs: 25000,
+      description: 'Launch an audio-visual ripple that pulls Butcher attention directly to nearby allies.',
+      isBetrayal: true,
+    },
+  },
+  parrot: {
+    primary: {
+      id: 'mimic_shout',
+      name: 'Tactical Squawk',
+      animal: 'parrot',
+      cooldownMs: 10000,
+      description: 'Broadcasts a strategic callout with high-priority audio audible up to 20m.',
+      isBetrayal: false,
+    },
+    betrayal: {
+      id: 'false_gossip',
+      name: 'Treacherous Echo',
+      animal: 'parrot',
+      cooldownMs: 22000,
+      description: 'Mimic wounded prey audio to bait allies toward the Butcher and elevate their Marks.',
+      isBetrayal: true,
+    },
+  },
+};
+
+export const BUTCHER_ABILITIES: Record<string, IAbilityDef> = {
+  cleaver: {
+    id: 'cleaver_swing',
+    name: 'Cleaver Swing',
+    animal: 'butcher',
+    cooldownMs: 3000,
+    description: 'Vicious wide arc melee strike that downs any animal in 1 hit.',
+    isBetrayal: false,
+  },
+  lantern: {
+    id: 'lantern_reveal',
+    name: 'Lantern of the Damned',
+    animal: 'butcher',
+    cooldownMs: 12000,
+    description: 'Flash a blazing 8-meter cone, uncovering hidden or stealthed animals for 4s.',
+    isBetrayal: false,
+  },
+  snare: {
+    id: 'bear_snare',
+    name: 'Rust Snare',
+    animal: 'butcher',
+    cooldownMs: 20000,
+    description: 'Deploy a hidden snap trap that completely roots any stepping animal for 3s.',
+    isBetrayal: false,
+  },
+  whistle: {
+    id: 'dog_whistle',
+    name: 'Hound Patrol Whistle',
+    animal: 'butcher',
+    cooldownMs: 45000,
+    description: 'Summon an aggressive farm hound to scout and flush animals out of hiding.',
+    isBetrayal: false,
+  },
+};

@@ -1,0 +1,6 @@
+{
+  "name": "Farm Fatale",
+  "description": "A fast-paced top-down 2D asymmetric survival multiplayer game where farm animals survive against the Butcher with voice communications, weather systems, and comedic abilities.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
