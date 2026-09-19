@@ -861,15 +861,53 @@ export class GameScene extends Phaser.Scene {
       this.connectColyseus();
     });
 
-    // Centered Camera
+    // Centered Camera on scenic altar for Main Menu backdrop
     this.cameras.main.centerOn(GAME_CONSTANTS.ALTAR_POSITION.x, GAME_CONSTANTS.ALTAR_POSITION.y);
     this.cameras.main.setZoom(1.15);
 
     // Create HUD & Debug Overlays
     this.createHudOverlay();
 
-    // Connect to Colyseus Server
-    this.connectColyseus();
+    // Setup direct touch / drag canvas pointer fallback for mobile
+    this.setupCanvasTouchFallback();
+
+    console.log('[GameScene] Ready in Main Menu mode. Awaiting user mode selection.');
+  }
+
+  private canvasTouchOrigin: { x: number; y: number } | null = null;
+
+  private setupCanvasTouchFallback() {
+    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      // If pointer is pressed on the left 60% of the screen while in match
+      if (pointer.x < this.cameras.main.width * 0.65 && (this.isOfflineMode || this.currentRoom)) {
+        this.canvasTouchOrigin = { x: pointer.x, y: pointer.y };
+      }
+    });
+
+    this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+      if (!pointer.isDown || !this.canvasTouchOrigin) return;
+      const dx = pointer.x - this.canvasTouchOrigin.x;
+      const dy = pointer.y - this.canvasTouchOrigin.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist > 10) {
+        const norm = Math.min(dist / 55, 1);
+        const angle = Math.atan2(dy, dx);
+        this.mobileMoveVector.dx = Math.cos(angle) * norm;
+        this.mobileMoveVector.dy = Math.sin(angle) * norm;
+        this.isMobileMoveActive = true;
+      } else {
+        this.mobileMoveVector.dx = 0;
+        this.mobileMoveVector.dy = 0;
+      }
+    });
+
+    const resetPointer = () => {
+      this.canvasTouchOrigin = null;
+      // Do not clear if DOM joystick is still dispatching
+    };
+
+    this.input.on('pointerup', resetPointer);
+    this.input.on('pointerupoutside', resetPointer);
   }
 
   private createHudOverlay() {
@@ -2507,6 +2545,13 @@ export class GameScene extends Phaser.Scene {
 
   update(time: number, delta: number) {
     this.updateCommsAndEngagement(time, delta);
+
+    if (!this.isOfflineMode && !this.currentRoom) {
+      // Ambient Main Menu mode: gently drift camera around altar
+      this.cameras.main.scrollX = GAME_CONSTANTS.ALTAR_POSITION.x - this.cameras.main.width / 2 + Math.sin(time * 0.0003) * 30;
+      this.cameras.main.scrollY = GAME_CONSTANTS.ALTAR_POSITION.y - this.cameras.main.height / 2 + Math.cos(time * 0.0003) * 20;
+      return;
+    }
 
     if (this.isOfflineMode) {
       this.updateLocalMode(time, delta);

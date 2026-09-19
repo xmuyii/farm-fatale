@@ -13,52 +13,51 @@ export class OrientationLockOverlay {
     this.checkOrientation();
   }
 
+  private isDismissed: boolean = false;
+
   private createDom() {
     if (document.getElementById('farm-orientation-lock-overlay')) return;
 
     this.container = document.createElement('div');
     this.container.id = 'farm-orientation-lock-overlay';
+    this.container.style.display = 'none';
     this.container.className =
-      'fixed inset-0 z-[999999] flex flex-col items-center justify-center p-6 bg-stone-950/95 backdrop-blur-xl text-stone-100 font-sans select-none transition-opacity duration-300 hidden';
+      'fixed inset-0 z-[99999] flex flex-col items-center justify-center p-6 bg-stone-950/90 backdrop-blur-xl text-stone-100 font-sans select-none transition-opacity duration-300';
 
     this.container.innerHTML = `
-      <div class="max-w-xs sm:max-w-sm flex flex-col items-center text-center space-y-6">
+      <div class="max-w-xs sm:max-w-sm flex flex-col items-center text-center space-y-5 bg-stone-900/90 p-6 rounded-3xl border border-stone-700 shadow-2xl">
         <!-- Animated Rotating Phone Graphic -->
-        <div class="relative w-28 h-28 flex items-center justify-center">
+        <div class="relative w-20 h-20 flex items-center justify-center">
           <div class="absolute inset-0 rounded-full bg-amber-500/10 animate-ping"></div>
-          <div class="relative w-24 h-24 rounded-3xl bg-stone-900 border-2 border-amber-500/60 shadow-2xl shadow-amber-950 flex items-center justify-center overflow-hidden">
-            <div id="rotating-phone-icon" class="text-4xl transition-transform duration-700 ease-in-out transform">
+          <div class="relative w-18 h-18 rounded-2xl bg-stone-800 border-2 border-amber-500/60 shadow-xl flex items-center justify-center">
+            <div id="rotating-phone-icon" class="text-3xl">
               📱
             </div>
-            <span class="absolute bottom-2 w-6 h-1 rounded-full bg-stone-700"></span>
-          </div>
-          <!-- Curved rotation arrows -->
-          <div class="absolute -top-1 -right-1 text-2xl animate-bounce">
-            🔄
           </div>
         </div>
 
         <!-- Copy & Status -->
-        <div class="space-y-2">
-          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-950/80 border border-red-800/80 text-red-300 font-mono text-[11px] font-bold">
-            <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
-            <span>LANDSCAPE REQUIRED</span>
+        <div class="space-y-1.5">
+          <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-950/80 border border-amber-800 text-amber-300 font-mono text-[10px] font-bold">
+            <span>TIP: WIDESCREEN RECOMMENDED</span>
           </div>
-          <h2 class="text-2xl font-black text-amber-400 font-mono tracking-wider">
-            ROTATE YOUR PHONE
+          <h2 class="text-xl font-black text-amber-400 font-mono tracking-wider">
+            LANDSCAPE SUGGESTED
           </h2>
-          <p class="text-xs sm:text-sm text-stone-300 leading-relaxed">
-            Farm Fatale is built for tactical widescreen stealth. Rotate your device sideways to play with full on-screen controls.
+          <p class="text-xs text-stone-300 leading-relaxed">
+            Rotate your phone sideways for the best field of view and wider thumb controls.
           </p>
         </div>
 
-        <!-- Fullscreen Lock Button -->
-        <div class="w-full space-y-3 pt-2">
-          <button id="lock-landscape-btn" class="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-stone-950 font-black text-sm tracking-wide shadow-xl shadow-amber-950/80 transition-all transform active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
+        <!-- Buttons -->
+        <div class="w-full space-y-2 pt-1">
+          <button id="lock-landscape-btn" class="w-full py-3 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-black text-xs tracking-wide shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
             <span>📐</span>
-            <span>ENTER LANDSCAPE FULLSCREEN</span>
+            <span>SWITCH TO LANDSCAPE</span>
           </button>
-          <p class="text-[10px] text-stone-500 font-mono">Auto-rotates when device orientation switches</p>
+          <button id="dismiss-portrait-btn" class="w-full py-2.5 px-4 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-300 font-bold text-xs transition-all active:scale-95 cursor-pointer">
+            Continue in Portrait Mode
+          </button>
         </div>
       </div>
     `;
@@ -68,6 +67,12 @@ export class OrientationLockOverlay {
     // Lock button event
     this.container.querySelector('#lock-landscape-btn')?.addEventListener('click', () => {
       this.requestLandscapeLock();
+    });
+
+    // Dismiss button event
+    this.container.querySelector('#dismiss-portrait-btn')?.addEventListener('click', () => {
+      this.isDismissed = true;
+      if (this.container) this.container.style.display = 'none';
     });
   }
 
@@ -88,23 +93,13 @@ export class OrientationLockOverlay {
 
     this.isPortrait = isPortrait;
 
-    if (isPortrait) {
-      this.container.classList.remove('hidden');
+    if (isPortrait && !this.isDismissed) {
+      this.container.style.display = 'flex';
       this.container.classList.remove('opacity-0');
       this.container.classList.add('opacity-100');
-
-      // Animate the phone graphic tilting
-      const phone = this.container.querySelector('#rotating-phone-icon');
-      if (phone) {
-        phone.classList.add('rotate-90');
-      }
     } else {
       this.container.classList.add('opacity-0');
-      setTimeout(() => {
-        if (!this.isPortrait && this.container) {
-          this.container.classList.add('hidden');
-        }
-      }, 250);
+      this.container.style.display = 'none';
     }
   }
 

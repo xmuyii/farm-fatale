@@ -410,15 +410,19 @@ export class HomeMenuModal {
     this.isOpen = true;
     this.render();
     if (this.container) {
+      this.container.style.display = 'flex';
       this.container.classList.remove('opacity-0', 'pointer-events-none');
     }
+    window.dispatchEvent(new CustomEvent('HOME_MENU_OPEN'));
   }
 
   public close() {
     this.isOpen = false;
     if (this.container) {
       this.container.classList.add('opacity-0', 'pointer-events-none');
+      this.container.style.display = 'none';
     }
+    window.dispatchEvent(new CustomEvent('HOME_MENU_CLOSE'));
   }
 
   public toggle() {

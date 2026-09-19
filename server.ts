@@ -7,7 +7,7 @@ import { WebSocketTransport } from '@colyseus/ws-transport';
 import { createServer as createViteServer } from 'vite';
 import { FarmRoom } from './server/src/rooms/FarmRoom.ts';
 
-const PORT = Number(process.env.PORT) || 3000;
+const PORT = 3000;
 
 async function startServer() {
   const app = express();
@@ -27,7 +27,7 @@ async function startServer() {
   // Vite middleware in dev or static serving in production
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: { middlewareMode: true, hmr: false },
       appType: 'spa',
     });
     app.use(vite.middlewares);

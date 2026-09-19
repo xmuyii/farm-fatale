@@ -11,6 +11,7 @@ export class VoiceConsentModal {
 
     this.container = document.createElement('div');
     this.container.id = 'farm-voice-consent-modal';
+    this.container.style.display = 'none';
     this.container.className =
       'fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm opacity-0 pointer-events-none transition-all duration-200';
 
@@ -66,14 +67,16 @@ export class VoiceConsentModal {
     this.onDecisionCallback = onDecision;
     this.createDom();
     if (!this.container) return;
+    this.container.style.display = 'flex';
     this.container.classList.remove('opacity-0', 'pointer-events-none');
-    this.container.classList.add('opacity-100');
+    this.container.classList.add('opacity-100', 'pointer-events-auto');
   }
 
   close() {
     if (!this.container) return;
-    this.container.classList.remove('opacity-100');
+    this.container.classList.remove('opacity-100', 'pointer-events-auto');
     this.container.classList.add('opacity-0', 'pointer-events-none');
+    this.container.style.display = 'none';
   }
 }
 
